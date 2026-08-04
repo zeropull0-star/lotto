@@ -1,0 +1,534 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>로또 추첨기</title>
+<style>
+:root{
+  --bg:#12141a; --card:#1b1e26; --card2:#232733; --line:#2c313d;
+  --txt:#e7e9ee; --muted:#8b909d; --accent:#5b8cff; --accent2:#33c98a;
+  --warn:#ffb454; --danger:#ff6b6b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,"Noto Sans KR",Roboto,"Malgun Gothic",sans-serif;
+  font-size:15px;line-height:1.5;padding-bottom:60px}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:640px;margin:0 auto;padding:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+header h1{font-size:18px;margin:0}
+.nav{font-size:13px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.muted{color:var(--muted);font-size:12.5px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+label.opt{display:flex;align-items:center;gap:6px;font-size:13.5px;background:var(--card2);
+  border:1px solid var(--line);border-radius:10px;padding:7px 10px;cursor:pointer}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+button{font-family:inherit;font-size:14px;border:none;border-radius:10px;padding:9px 14px;
+  background:var(--card2);color:var(--txt);cursor:pointer;border:1px solid var(--line)}
+button:active{transform:scale(.98)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+button.ghost{background:transparent}
+select,input[type=number]{font-family:inherit;font-size:14px;background:var(--card2);color:var(--txt);
+  border:1px solid var(--line);border-radius:10px;padding:8px}
+.seg{display:flex;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;background:transparent;border:none;padding:10px 6px;border-radius:9px;color:var(--muted);font-weight:600}
+.seg button.on{background:var(--accent);color:#fff}
+.seg-desc{font-size:12.5px;color:var(--muted);margin-top:8px;min-height:34px}
+.ball{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;
+  font-weight:700;font-size:14px;color:#2b2b2b;margin:2px;box-shadow:inset 0 -3px 6px rgba(0,0,0,.18)}
+.ball.sm{width:28px;height:28px;font-size:12.5px}
+.bcol-1{background:#fbc400}.bcol-2{background:#69c8f2}.bcol-3{background:#ff7272}
+.bcol-4{background:#cfd0d3}.bcol-5{background:#b0d840}
+.setline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
+.setline:last-child{border-bottom:none}
+.settag{font-size:11px;color:var(--muted);min-width:26px}
+.badges{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap}
+.badge{font-size:10.5px;color:var(--muted);background:var(--card2);border:1px solid var(--line);
+  border-radius:6px;padding:2px 6px;white-space:nowrap}
+.grid45{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-top:10px}
+.gcell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
+  background:var(--card2);border:1px solid var(--line);font-size:13px;cursor:pointer;user-select:none}
+.gcell.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.hint{background:#1e2a1e;border:1px solid #2f5030;color:#bfe6bf;font-size:12.5px;border-radius:10px;padding:9px 11px;margin-top:10px}
+.hint.warn{background:#2a2418;border-color:#5b4a24;color:#ffdba0}
+.progress{height:6px;background:var(--card2);border-radius:99px;overflow:hidden;margin-top:8px}
+.progress > i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:#000d;color:#fff;padding:10px 16px;border-radius:99px;font-size:13px;pointer-events:none;
+  transition:.25s;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.small{font-size:12px;padding:6px 10px}
+h3{font-size:14px;margin:0 0 8px}
+.disclaimer{font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px;line-height:1.6}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>🎱 로또 추첨기</h1>
+    <div class="nav"><a href="lotto.html">분석기 →</a></div>
+  </header>
+
+  <!-- 데이터 -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div id="status" class="muted">데이터 확인중…</div>
+      <div class="row">
+        <button class="small" id="btn-sync">최신 동기화</button>
+        <button class="small ghost" id="btn-syncall">전체</button>
+      </div>
+    </div>
+    <div class="progress" id="prog-wrap" style="display:none"><i id="prog"></i></div>
+    <div class="row" style="margin-top:8px">
+      <span class="muted">CORS 프록시(웹):</span>
+      <select id="proxy-sel">
+        <option value="https://corsproxy.io/?">corsproxy.io</option>
+        <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
+        <option value="https://api.codetabs.com/v1/proxy?quest=">codetabs.com</option>
+        <option value="">없음 (앱/로컬서버)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 모드 -->
+  <div class="card">
+    <div class="seg" id="mode-seg">
+      <button data-mode="C" class="on">C · 골고루</button>
+      <button data-mode="A">A · 몰빵휠</button>
+      <button data-mode="B">B · 커버리지</button>
+    </div>
+    <div class="seg-desc" id="mode-desc"></div>
+  </div>
+
+  <!-- 공통 옵션 -->
+  <div class="card">
+    <h3>옵션</h3>
+    <div class="row">
+      <label class="opt"><input type="checkbox" id="opt-unpop" checked> 비인기 필터</label>
+      <label class="opt"><input type="checkbox" id="opt-antirep" checked> 반복 방지</label>
+      <label class="opt">게임 수
+        <input type="number" id="opt-games" value="10" min="1" max="20" style="width:56px">
+      </label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="opt" style="flex:1">최근 <span id="win-label">120</span>회 반영
+        <input type="range" id="opt-window" min="20" max="400" step="10" value="120" style="flex:1">
+      </label>
+    </div>
+    <div class="muted" style="margin-top:6px">최근 회차만 가중치에 반영 → 매주 흐름이 바뀝니다. (C는 거의 균등, A·B 풀 추천에 사용)</div>
+  </div>
+
+  <!-- 풀 (A/B 전용) -->
+  <div class="card" id="pool-card" style="display:none">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">풀 선택 <span class="muted" id="pool-count"></span></h3>
+      <div class="row">
+        <button class="small" id="btn-autopool">자동 추천</button>
+        <button class="small ghost" id="btn-clearpool">비우기</button>
+      </div>
+    </div>
+    <div class="muted" id="pool-need"></div>
+    <div class="grid45" id="pool-grid"></div>
+    <div id="pool-hint"></div>
+  </div>
+
+  <button class="primary" id="btn-gen" style="width:100%;padding:14px;font-size:16px">번호 생성</button>
+
+  <!-- 결과 -->
+  <div class="card" id="result-card" style="display:none;margin-top:12px">
+    <div class="row" style="justify-content:space-between;margin-bottom:4px">
+      <h3 style="margin:0">추천 조합</h3>
+      <div class="row">
+        <button class="small" id="btn-copy">복사</button>
+        <button class="small" id="btn-save">저장</button>
+      </div>
+    </div>
+    <div id="guarantee"></div>
+    <div id="result"></div>
+    <div id="coverage" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div class="disclaimer">
+    로또는 매 회차 독립 균등추첨입니다. 어떤 방법도 당첨 <b>확률</b>은 바꾸지 못하며,<br>
+    이 도구는 <b>다양화 · 당첨 시 분배 최소화 · 잔당첨 커버리지</b>를 돕는 재미용입니다.
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ===== 상수 (분석기와 데이터 공유) ===== */
+const STORE_KEY="lotto_data_v1";      // 분석기와 동일 → 이미 받은 회차 재사용
+const PROXY_KEY="lotto_proxy_v1";
+const GEN_KEY="lotto_gen_memory_v1";  // 반복방지: 지난 추천 기록
+const SAVE_KEY="lotto_gen_saved_v1";  // 저장한 세트
+
+const $=s=>document.querySelector(s);
+const sec=n=>n<=10?0:n<=20?1:n<=30?2:n<=40?3:4;
+const ballColor=n=>n<=10?1:n<=20?2:n<=30?3:n<=40?4:5;
+function ballEl(n,sm){
+  const el=document.createElement("span");
+  el.className=`ball bcol-${ballColor(n)}${sm?" sm":""}`;
+  el.textContent=n;return el;
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");
+  clearTimeout(toast._h);toast._h=setTimeout(()=>t.classList.remove("show"),1900);}
+
+/* ===== 데이터 저장소 ===== */
+const Store={
+  load(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||"{}")}catch(e){return{}}},
+  save(d){localStorage.setItem(STORE_KEY,JSON.stringify(d))},
+  array(d){return Object.values(d||this.load()).sort((a,b)=>a.drwNo-b.drwNo)}
+};
+let DATA=Store.load();
+const getList=()=>Store.array(DATA);
+const latestRound=()=>{const l=getList();return l.length?l[l.length-1].drwNo:0};
+function estimatedLatestRound(){
+  const start=new Date("2002-12-07T20:45:00+09:00");
+  return Math.max(1,Math.floor((Date.now()-start)/86400000/7)+1);
+}
+
+/* ===== API (웹=프록시 / 앱=네이티브 브리지) ===== */
+const getProxy=()=>localStorage.getItem(PROXY_KEY) ?? "https://corsproxy.io/?";
+const setProxy=v=>localStorage.setItem(PROXY_KEY,v);
+const IS_ANDROID=(function(){try{return !!(window.AndroidBridge&&AndroidBridge.isAndroid&&AndroidBridge.isAndroid())}catch(e){return false}})();
+const _pending={};
+window.__bridgeResolve=function(id,payload){const p=_pending[id];if(!p)return;delete _pending[id];
+  try{p.resolve(JSON.parse(payload))}catch(e){p.reject(e)}};
+function bridgeFetchJson(url){return new Promise((resolve,reject)=>{
+  const id="cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+  _pending[id]={resolve,reject};
+  try{AndroidBridge.fetchJson(url,id)}catch(e){reject(e)}
+  setTimeout(()=>{if(_pending[id]){delete _pending[id];reject(new Error("bridge timeout"))}},15000);
+});}
+async function fetchRound(drwNo){
+  const target=`https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${drwNo}`;
+  let j;
+  if(IS_ANDROID){
+    const res=await bridgeFetchJson(target);
+    if(!res.ok)throw new Error("Native HTTP "+(res.status||0)+" "+(res.error||""));
+    j=JSON.parse(res.body);
+  }else{
+    const proxy=getProxy();
+    const url=proxy?(proxy+encodeURIComponent(target)):target;
+    const r=await fetch(url,{cache:"no-store"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    j=await r.json();
+  }
+  if(j.returnValue!=="success")return null;
+  return {drwNo:j.drwNo,date:j.drwNoDate,
+    nums:[j.drwtNo1,j.drwtNo2,j.drwtNo3,j.drwtNo4,j.drwtNo5,j.drwtNo6].sort((a,b)=>a-b),
+    bonus:j.bnusNo};
+}
+async function syncLatest(){
+  const st=$("#status");st.textContent="최신 회차 확인중…";
+  let guess=estimatedLatestRound()+2,found=null;
+  for(let i=0;i<8;i++){try{const r=await fetchRound(guess-i);if(r){found=r;break}}catch(e){}}
+  if(!found){st.textContent="조회 실패 — 프록시를 바꿔보세요";return}
+  let cur=found.drwNo+1;
+  while(true){try{const r=await fetchRound(cur);if(!r)break;found=r;cur++;}catch(e){break}}
+  const have=new Set(Object.keys(DATA).map(Number));
+  const miss=[];for(let n=1;n<=found.drwNo;n++)if(!have.has(n))miss.push(n);
+  for(const n of miss.slice(-8)){try{const r=await fetchRound(n);if(r)DATA[n]=r}catch(e){}}
+  DATA[found.drwNo]=found;Store.save(DATA);
+  updateStatus();toast("동기화 완료");
+}
+async function syncAll(){
+  const st=$("#status"),pw=$("#prog-wrap"),pg=$("#prog");
+  pw.style.display="block";st.textContent="전체 동기화…";
+  let target=estimatedLatestRound()+2;
+  for(let i=0;i<8;i++){try{const r=await fetchRound(target-i);if(r){target=r.drwNo;DATA[r.drwNo]=r;break}}catch(e){}}
+  const have=new Set(Object.keys(DATA).map(Number));
+  const todo=[];for(let n=1;n<=target;n++)if(!have.has(n))todo.push(n);
+  let done=0,idx=0;const total=todo.length||1;
+  async function worker(){while(idx<todo.length){const n=todo[idx++];
+    try{const r=await fetchRound(n);if(r)DATA[n]=r}catch(e){}
+    done++;if(done%8===0||done===todo.length){Store.save(DATA);pg.style.width=(done/total*100).toFixed(1)+"%";st.textContent=`전체 동기화 ${done}/${total}`;}}}
+  await Promise.all([0,0,0,0,0].map(worker));
+  Store.save(DATA);pg.style.width="100%";updateStatus();
+  setTimeout(()=>pw.style.display="none",800);toast("전체 동기화 완료");
+}
+function updateStatus(){
+  const n=getList().length;
+  $("#status").textContent=n?`저장 ${n}회 · 최신 ${latestRound()}회`:"데이터 없음 — 동기화 필요";
+}
+
+/* ===== 통계 가중치 (최근 윈도우) ===== */
+function baseWeights(){
+  const list=getList();
+  const win=+$("#opt-window").value;
+  const recent=win>0?list.slice(-win):list;
+  const f=Array(46).fill(0),lastSeen=Array(46).fill(-1);
+  recent.forEach((d,i)=>d.nums.forEach(n=>{f[n]++;lastSeen[n]=i}));
+  const w=Array(46).fill(1);
+  const maxF=Math.max(1,...f.slice(1));
+  for(let n=1;n<=45;n++){
+    const hot=f[n]/maxF;                                   // 0~1 출현빈도
+    const gap=lastSeen[n]<0?1:(recent.length-1-lastSeen[n])/Math.max(1,recent.length); // 미출현
+    w[n]=1+hot*0.9+gap*0.6;                                // 살짝만 반영(평탄)
+  }
+  return w;
+}
+
+/* ===== 필터 ===== */
+function passFilter(p,unpop){
+  const sum=p.reduce((a,b)=>a+b,0);
+  if(sum<100||sum>175)return false;
+  const odd=p.filter(n=>n%2).length;
+  if(odd<2||odd>4)return false;
+  const sc=[0,0,0,0,0];for(const n of p)sc[sec(n)]++;
+  if(Math.max(...sc)>3)return false;
+  if(unpop){
+    if(p[5]<=31)return false;                     // 전부 생일대(1~31)
+    let run=1,mx=1;
+    for(let i=1;i<6;i++){if(p[i]===p[i-1]+1){run++;mx=Math.max(mx,run)}else run=1;}
+    if(mx>=3)return false;                          // 연속 3개 이상
+    const tens={};for(const n of p){const t=(n/10)|0;tens[t]=(tens[t]||0)+1;}
+    if(Math.max(...Object.values(tens))>=4)return false; // 같은 10번대 4개↑
+  }
+  return true;
+}
+
+/* ===== 가중 추출 ===== */
+function weightedPick(wf,need,excludeSet){
+  const pool=[];
+  for(let n=1;n<=45;n++){if(excludeSet&&excludeSet.has(n))continue;pool.push({n,w:Math.max(wf(n),1e-6)})}
+  const res=[];
+  while(res.length<need&&pool.length){
+    const tot=pool.reduce((s,x)=>s+x.w,0);let r=Math.random()*tot,idx=0;
+    for(let i=0;i<pool.length;i++){r-=pool[i].w;if(r<=0){idx=i;break}}
+    res.push(pool[idx].n);pool.splice(idx,1);
+  }
+  return res.sort((a,b)=>a-b);
+}
+
+/* ===== 반복방지 메모리 ===== */
+const loadGenMem=()=>{try{return new Set(JSON.parse(localStorage.getItem(GEN_KEY)||"[]"))}catch(e){return new Set()}};
+function pushGenMem(sigs){
+  let arr=[];try{arr=JSON.parse(localStorage.getItem(GEN_KEY)||"[]")}catch(e){}
+  arr=arr.concat(sigs);
+  if(arr.length>300)arr=arr.slice(-300);
+  localStorage.setItem(GEN_KEY,JSON.stringify(arr));
+}
+
+/* ===== 전략 C: 맥스 스프레드 ===== */
+function genC(games,unpop){
+  const base=baseWeights();
+  const usage=Array(46).fill(0);
+  const mem=loadGenMem();
+  const out=[];
+  for(let g=0;g<games;g++){
+    let pick=null;
+    for(let t=0;t<500;t++){
+      const cand=weightedPick(n=>base[n]/Math.pow(1+usage[n],1.6),6,null);
+      const sig=cand.join("-");
+      if(out.some(o=>o.join("-")===sig))continue;
+      if($("#opt-antirep").checked&&mem.has(sig))continue;
+      if(!passFilter(cand,unpop))continue;
+      pick=cand;break;
+    }
+    if(!pick)pick=weightedPick(n=>1/Math.pow(1+usage[n],1.6),6,null);
+    pick.forEach(n=>usage[n]++);
+    out.push(pick);
+  }
+  return out;
+}
+
+/* ===== 전략 A: 7개 풀 완전 휠 + 나머지 스프레드 ===== */
+function genA(games,unpop){
+  let pool=selectedPool();
+  const base=baseWeights();
+  // 정확히 7개로 맞춤
+  if(pool.length>7){pool=[...pool].sort((a,b)=>base[b]-base[a]).slice(0,7);}
+  while(pool.length<7){
+    const cand=weightedPick(n=>base[n],1,new Set(pool))[0];
+    if(cand&&!pool.includes(cand))pool.push(cand);
+  }
+  pool.sort((a,b)=>a-b);
+  const out=[];
+  for(let i=0;i<7&&out.length<games;i++){out.push(pool.filter((_,j)=>j!==i))} // 하나씩 빼는 7조합
+  // 남는 칸은 스프레드로 채움
+  const usage=Array(46).fill(0);out.forEach(t=>t.forEach(n=>usage[n]++));
+  while(out.length<games){
+    let pick=null;
+    for(let t=0;t<400;t++){
+      const cand=weightedPick(n=>base[n]/Math.pow(1+usage[n],1.6),6,null);
+      if(out.some(o=>o.join("-")===cand.join("-")))continue;
+      if(!passFilter(cand,unpop))continue;pick=cand;break;
+    }
+    if(!pick)break;pick.forEach(n=>usage[n]++);out.push(pick);
+  }
+  out._pool=pool;
+  return out;
+}
+
+/* ===== 전략 B: 커버리지 휠 (풀 12~18) ===== */
+function comb(n,k){if(k<0||k>n)return 0;let r=1;for(let i=0;i<k;i++)r=r*(n-i)/(i+1);return Math.round(r)}
+function genB(games,unpop){
+  let pool=[...selectedPool()].sort((a,b)=>a-b);
+  const poolSet=new Set(pool);
+  const notPool=new Set();for(let n=1;n<=45;n++)if(!poolSet.has(n))notPool.add(n);
+  const usage={};pool.forEach(n=>usage[n]=0);
+  const target=Math.min(games,comb(pool.length,6));   // 풀에서 만들 수 있는 최대 서로다른 조합
+  const out=[],seen=new Set();
+  let guard=0;
+  while(out.length<target&&guard<target*400){
+    guard++;
+    // 덜 쓰인 풀 숫자 우선 + 지터(고정 조합에 갇히지 않게)
+    const cand=weightedPick(n=>poolSet.has(n)?(1/Math.pow(1+usage[n],2))*(0.5+Math.random()):0,6,notPool);
+    const sig=cand.join("-");
+    if(cand.length<6||seen.has(sig))continue;
+    seen.add(sig);cand.forEach(n=>usage[n]++);out.push(cand);
+  }
+  out._pool=pool;
+  return out;
+}
+
+/* ===== B/A 보장 계산 (풀 안 6적중 시 최소 일치) ===== */
+function popcount(x){let c=0;while(x){x&=x-1;c++}return c}
+function guaranteeInPool(tickets,pool){
+  if(pool.length<6||pool.length>20)return null;
+  const idx={};pool.forEach((n,i)=>idx[n]=i);
+  const masks=tickets.filter(t=>t.every(n=>n in idx)).map(t=>t.reduce((m,n)=>m|(1<<idx[n]),0));
+  if(!masks.length)return null;
+  const P=pool.length;let minMatch=6;
+  // 풀에서 6개가 뽑히는 모든 경우
+  const combs=[];
+  (function rec(start,acc){if(acc.length===6){combs.push(acc.reduce((m,i)=>m|(1<<i),0));return}
+    for(let i=start;i<P;i++)rec(i+1,acc.concat(i))})(0,[]);
+  for(const w of combs){
+    let best=0;for(const m of masks){const c=popcount(m&w);if(c>best)best=c}
+    if(best<minMatch)minMatch=best;
+  }
+  return {count:combs.length,minMatch};
+}
+
+/* ===== 풀 그리드 ===== */
+let POOL=new Set();
+function buildGrid(){
+  const g=$("#pool-grid");g.innerHTML="";
+  for(let n=1;n<=45;n++){
+    const c=document.createElement("div");
+    c.className="gcell"+(POOL.has(n)?" on":"");c.textContent=n;
+    c.onclick=()=>{POOL.has(n)?POOL.delete(n):POOL.add(n);buildGrid()};
+    g.appendChild(c);
+  }
+  $("#pool-count").textContent=`(${POOL.size}개 선택)`;
+}
+const selectedPool=()=>[...POOL].sort((a,b)=>a-b);
+function autoPool(){
+  const need=currentMode==="A"?7:15;
+  const base=baseWeights();
+  const chosen=new Set();
+  // 가중 + 약간의 랜덤으로 need개 뽑기 (누를 때마다 조금 달라짐)
+  const cand=weightedPick(n=>base[n]*(0.7+Math.random()*0.6),need,null);
+  cand.forEach(n=>chosen.add(n));
+  POOL=chosen;buildGrid();updatePoolHint();
+}
+function updatePoolHint(){
+  const h=$("#pool-hint");const need=$("#pool-need");
+  if(currentMode==="A"){
+    need.textContent="A: 정확히 7개 권장 (많으면 상위 7개만, 적으면 자동 채움)";
+    h.className="hint";h.innerHTML="이 7개 안에 당첨 6개가 <b>모두</b> 들면 1등 1장 + 5개 일치 6장 확정.";
+  }else{
+    need.textContent="B: 12~18개 권장 (풀이 넓을수록 잔당첨 커버리지↑)";
+    h.className=(POOL.size>=12&&POOL.size<=18)?"hint":"hint warn";
+    h.innerHTML=(POOL.size<12?"⚠ 12개 이상 선택하세요.":POOL.size>18?"⚠ 18개 이하 권장(계산 부담).":"생성하면 이 풀의 <b>실제 보장 수치</b>를 계산해 보여줍니다.");
+  }
+}
+
+/* ===== 모드 ===== */
+let currentMode="C";
+const MODE_DESC={
+  C:"기본 · 10장을 최대한 겹치지 않게 골고루. 45개 번호를 넓게 커버하고 매번 새 조합. 반복 없음.",
+  A:"몰빵 · 내가 고른 7개로 완전 휠. 그 7개가 터지면 크게, 아니면 꽝. 대박 노리는 날.",
+  B:"커버리지 · 넓은 풀(12~18)로 잔당첨을 촘촘히. 큰 대박보단 4·5등 회수율 위주."
+};
+function setMode(m){
+  currentMode=m;
+  document.querySelectorAll("#mode-seg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+  $("#mode-desc").textContent=MODE_DESC[m];
+  $("#pool-card").style.display=(m==="C")?"none":"block";
+  if(m!=="C"){updatePoolHint();if(POOL.size===0)autoPool();}
+}
+
+/* ===== 렌더 ===== */
+let LAST=[];
+function badgesFor(p){
+  const sum=p.reduce((a,b)=>a+b,0);
+  const odd=p.filter(n=>n%2).length;
+  return `<span class="badge">합 ${sum}</span><span class="badge">홀${odd}:짝${6-odd}</span>`;
+}
+function render(sets,mode){
+  LAST=sets;
+  $("#result-card").style.display="block";
+  const R=$("#result");R.innerHTML="";
+  const LETTERS="ABCDEFGHIJKLMNOPQRST";
+  sets.forEach((p,i)=>{
+    const line=document.createElement("div");line.className="setline";
+    const tag=document.createElement("span");tag.className="settag";tag.textContent=LETTERS[i]||("#"+(i+1));
+    line.appendChild(tag);
+    p.forEach(n=>line.appendChild(ballEl(n)));
+    const b=document.createElement("span");b.className="badges";b.innerHTML=badgesFor(p);
+    line.appendChild(b);R.appendChild(line);
+  });
+  // 커버리지
+  const used=new Set();sets.forEach(s=>s.forEach(n=>used.add(n)));
+  $("#coverage").textContent=`서로 다른 번호 ${used.size}/45개 커버`;
+  // 보장
+  const G=$("#guarantee");G.innerHTML="";
+  if(mode==="A"&&sets._pool){
+    G.className="hint";G.innerHTML=`<b>A 몰빵휠</b> · 풀 [${sets._pool.join(" ")}] — 이 7개에서 당첨 6개가 다 나오면 <b>1등 확정</b>.`;
+  }else if(mode==="B"&&sets._pool){
+    const gr=guaranteeInPool(sets,sets._pool);
+    if(gr){G.className="hint";G.innerHTML=`<b>B 커버리지</b> · 풀 ${sets._pool.length}개 안에서 당첨 6개가 다 나오는 모든 경우(${gr.count.toLocaleString()}가지)에서 <b>최소 ${gr.minMatch}개 일치</b> 보장.`;}
+    else{G.className="";}
+  }else{G.className="";}
+}
+
+/* ===== 실행 ===== */
+function generate(){
+  if(getList().length===0){toast("먼저 데이터를 동기화하세요");return}
+  const games=Math.max(1,Math.min(20,+$("#opt-games").value||10));
+  const unpop=$("#opt-unpop").checked;
+  let sets;
+  if(currentMode==="A")sets=genA(games,unpop);
+  else if(currentMode==="B"){
+    if(POOL.size<12){toast("B는 풀 12개 이상 필요");return}
+    sets=genB(games,unpop);
+  }else sets=genC(games,unpop);
+  render(sets,currentMode);
+  if($("#opt-antirep").checked)pushGenMem(sets.map(s=>s.join("-")));
+}
+
+/* ===== 저장/복사 ===== */
+function copyResult(){
+  const txt=LAST.map((p,i)=>`${"ABCDEFGHIJ"[i]||i+1}  ${p.join(", ")}`).join("\n");
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject())
+    .then(()=>toast("복사됨")).catch(()=>{prompt("복사하세요:",txt)});
+}
+function saveResult(){
+  let arr=[];try{arr=JSON.parse(localStorage.getItem(SAVE_KEY)||"[]")}catch(e){}
+  arr.push({t:Date.now(),mode:currentMode,sets:LAST});
+  localStorage.setItem(SAVE_KEY,JSON.stringify(arr));toast("저장됨");
+}
+
+/* ===== 이벤트 ===== */
+document.querySelectorAll("#mode-seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$("#opt-window").oninput=e=>$("#win-label").textContent=e.target.value;
+$("#btn-autopool").onclick=autoPool;
+$("#btn-clearpool").onclick=()=>{POOL=new Set();buildGrid();updatePoolHint()};
+$("#btn-gen").onclick=generate;
+$("#btn-copy").onclick=copyResult;
+$("#btn-save").onclick=saveResult;
+$("#btn-sync").onclick=syncLatest;
+$("#btn-syncall").onclick=syncAll;
+$("#proxy-sel").onchange=e=>setProxy(e.target.value);
+
+/* ===== 초기화 ===== */
+(function init(){
+  $("#proxy-sel").value=getProxy();
+  buildGrid();setMode("C");updateStatus();
+  if(getList().length===0){toast("데이터 동기화가 필요합니다");}
+})();
+</script>
