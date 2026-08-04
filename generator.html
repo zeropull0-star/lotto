@@ -90,14 +90,11 @@ h3{font-size:14px;margin:0 0 8px}
 
   <!-- 모드 -->
   <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <h3 style="margin:0">전략 믹스 <span class="muted">(원하는 만큼 섞기)</span></h3>
-      <span class="muted">총 <b id="mix-total">10</b>게임</span>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <label class="opt">C 골고루 <input type="number" id="cnt-c" value="10" min="0" max="20" style="width:50px"></label>
-      <label class="opt">A 몰빵휠 <input type="number" id="cnt-a" value="0" min="0" max="20" style="width:50px"></label>
-      <label class="opt">B 커버리지 <input type="number" id="cnt-b" value="0" min="0" max="20" style="width:50px"></label>
+    <div class="row" style="flex-wrap:nowrap;align-items:center;gap:8px">
+      <label class="opt" style="flex:1;justify-content:center;padding:7px 4px">C <input type="number" id="cnt-c" value="10" min="0" max="20" style="width:40px"></label>
+      <label class="opt" style="flex:1;justify-content:center;padding:7px 4px">A <input type="number" id="cnt-a" value="0" min="0" max="20" style="width:40px"></label>
+      <label class="opt" style="flex:1;justify-content:center;padding:7px 4px">B <input type="number" id="cnt-b" value="0" min="0" max="20" style="width:40px"></label>
+      <span class="muted" style="white-space:nowrap">총 <b id="mix-total">10</b></span>
     </div>
     <div class="seg-desc" id="mix-desc" style="margin-top:8px"></div>
   </div>
