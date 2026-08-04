@@ -72,8 +72,7 @@ h3{font-size:14px;margin:0 0 8px}
     <div class="row" style="justify-content:space-between">
       <div id="status" class="muted">데이터 확인중…</div>
       <div class="row">
-        <button class="small" id="btn-sync">최신 동기화</button>
-        <button class="small ghost" id="btn-syncall">전체</button>
+        <button class="small" id="btn-sync">데이터 새로고침</button>
       </div>
     </div>
     <div class="progress" id="prog-wrap" style="display:none"><i id="prog"></i></div>
@@ -91,12 +90,16 @@ h3{font-size:14px;margin:0 0 8px}
 
   <!-- 모드 -->
   <div class="card">
-    <div class="seg" id="mode-seg">
-      <button data-mode="C" class="on">C · 골고루</button>
-      <button data-mode="A">A · 몰빵휠</button>
-      <button data-mode="B">B · 커버리지</button>
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">전략 믹스 <span class="muted">(원하는 만큼 섞기)</span></h3>
+      <span class="muted">총 <b id="mix-total">10</b>게임</span>
     </div>
-    <div class="seg-desc" id="mode-desc"></div>
+    <div class="row" style="margin-top:10px">
+      <label class="opt">C 골고루 <input type="number" id="cnt-c" value="10" min="0" max="20" style="width:50px"></label>
+      <label class="opt">A 몰빵휠 <input type="number" id="cnt-a" value="0" min="0" max="20" style="width:50px"></label>
+      <label class="opt">B 커버리지 <input type="number" id="cnt-b" value="0" min="0" max="20" style="width:50px"></label>
+    </div>
+    <div class="seg-desc" id="mix-desc" style="margin-top:8px"></div>
   </div>
 
   <!-- 공통 옵션 -->
@@ -105,9 +108,6 @@ h3{font-size:14px;margin:0 0 8px}
     <div class="row">
       <label class="opt"><input type="checkbox" id="opt-unpop" checked> 비인기 필터</label>
       <label class="opt"><input type="checkbox" id="opt-antirep" checked> 반복 방지</label>
-      <label class="opt">게임 수
-        <input type="number" id="opt-games" value="10" min="1" max="20" style="width:56px">
-      </label>
     </div>
     <div class="row" style="margin-top:8px">
       <label class="opt" style="flex:1">최근 <span id="win-label">120</span>회 반영
@@ -417,40 +417,43 @@ function buildGrid(){
   $("#pool-count").textContent=`(${POOL.size}개 선택)`;
 }
 const selectedPool=()=>[...POOL].sort((a,b)=>a-b);
+const cnt=k=>Math.max(0,Math.min(20,+$("#cnt-"+k).value||0));
+// A/B가 함께면 넓은 풀(B기준), A만이면 7개
+const poolNeed=()=>cnt("b")>0?15:(cnt("a")>0?7:0);
 function autoPool(){
-  const need=currentMode==="A"?7:15;
+  const need=poolNeed()||7;
   const base=baseWeights();
-  const chosen=new Set();
-  // 가중 + 약간의 랜덤으로 need개 뽑기 (누를 때마다 조금 달라짐)
   const cand=weightedPick(n=>base[n]*(0.7+Math.random()*0.6),need,null);
-  cand.forEach(n=>chosen.add(n));
-  POOL=chosen;buildGrid();updatePoolHint();
+  POOL=new Set(cand);buildGrid();updatePoolHint();
 }
 function updatePoolHint(){
   const h=$("#pool-hint");const need=$("#pool-need");
-  if(currentMode==="A"){
-    need.textContent="A: 정확히 7개 권장 (많으면 상위 7개만, 적으면 자동 채움)";
-    h.className="hint";h.innerHTML="이 7개 안에 당첨 6개가 <b>모두</b> 들면 1등 1장 + 5개 일치 6장 확정.";
-  }else{
-    need.textContent="B: 12~18개 권장 (풀이 넓을수록 잔당첨 커버리지↑)";
+  const a=cnt("a"),b=cnt("b");
+  const msgs=[];
+  if(a>0)msgs.push(a>=7?"A: 7개 이상이면 그 안에서 6개 다 맞을 때 1등 확정(완전휠)":"A: 지금은 부분휠 — 1등 보장은 7게임부터");
+  if(b>0)msgs.push("B: 12~18개 권장, 풀 넓을수록 잔당첨 커버리지↑");
+  need.textContent=msgs.join("  ·  ");
+  if(b>0){
     h.className=(POOL.size>=12&&POOL.size<=18)?"hint":"hint warn";
-    h.innerHTML=(POOL.size<12?"⚠ 12개 이상 선택하세요.":POOL.size>18?"⚠ 18개 이하 권장(계산 부담).":"생성하면 이 풀의 <b>실제 보장 수치</b>를 계산해 보여줍니다.");
-  }
+    h.innerHTML=(POOL.size<12?"⚠ B는 풀 12개 이상 필요.":POOL.size>18?"⚠ 18개 이하 권장(계산 부담).":"생성하면 B의 <b>실제 보장 수치</b>를 계산해 보여줍니다. (A는 이 풀에서 상위 7개 사용)");
+  }else if(a>0){
+    h.className="hint";h.innerHTML=`이 풀 ${POOL.size}개 중 상위 7개로 완전휠 구성.`;
+  }else{h.className="";h.innerHTML="";}
 }
 
-/* ===== 모드 ===== */
-let currentMode="C";
-const MODE_DESC={
-  C:"기본 · 10장을 최대한 겹치지 않게 골고루. 45개 번호를 넓게 커버하고 매번 새 조합. 반복 없음.",
-  A:"몰빵 · 내가 고른 7개로 완전 휠. 그 7개가 터지면 크게, 아니면 꽝. 대박 노리는 날.",
-  B:"커버리지 · 넓은 풀(12~18)로 잔당첨을 촘촘히. 큰 대박보단 4·5등 회수율 위주."
-};
-function setMode(m){
-  currentMode=m;
-  document.querySelectorAll("#mode-seg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
-  $("#mode-desc").textContent=MODE_DESC[m];
-  $("#pool-card").style.display=(m==="C")?"none":"block";
-  if(m!=="C"){updatePoolHint();if(POOL.size===0)autoPool();}
+/* ===== 믹스 갱신 ===== */
+function updateMix(){
+  const c=cnt("c"),a=cnt("a"),b=cnt("b");
+  const total=c+a+b;
+  $("#mix-total").textContent=total;
+  const parts=[];
+  if(c)parts.push(`C 골고루 ${c}장`);
+  if(a)parts.push(`A 몰빵휠 ${a}장`);
+  if(b)parts.push(`B 커버리지 ${b}장`);
+  $("#mix-desc").textContent=total?("= "+parts.join(" + ")+(total>20?"  ⚠ 합계 20 이하 권장":"")):"각 전략 게임 수를 정하세요 (섞어도 됩니다).";
+  const needPool=(a+b)>0;
+  $("#pool-card").style.display=needPool?"block":"none";
+  if(needPool){if(POOL.size===0)autoPool();else updatePoolHint();}
 }
 
 /* ===== 렌더 ===== */
@@ -460,45 +463,48 @@ function badgesFor(p){
   const odd=p.filter(n=>n%2).length;
   return `<span class="badge">합 ${sum}</span><span class="badge">홀${odd}:짝${6-odd}</span>`;
 }
-function render(sets,mode){
-  LAST=sets;
+let LAST_META=null;
+function render(sets,meta){
+  LAST=sets;LAST_META=meta;
   $("#result-card").style.display="block";
   const R=$("#result");R.innerHTML="";
-  const LETTERS="ABCDEFGHIJKLMNOPQRST";
   sets.forEach((p,i)=>{
     const line=document.createElement("div");line.className="setline";
-    const tag=document.createElement("span");tag.className="settag";tag.textContent=LETTERS[i]||("#"+(i+1));
+    const tag=document.createElement("span");tag.className="settag";
+    tag.textContent=(meta.labels[i]||"")+(meta.nums[i]||"");
     line.appendChild(tag);
     p.forEach(n=>line.appendChild(ballEl(n)));
     const b=document.createElement("span");b.className="badges";b.innerHTML=badgesFor(p);
     line.appendChild(b);R.appendChild(line);
   });
-  // 커버리지
   const used=new Set();sets.forEach(s=>s.forEach(n=>used.add(n)));
   $("#coverage").textContent=`서로 다른 번호 ${used.size}/45개 커버`;
-  // 보장
-  const G=$("#guarantee");G.innerHTML="";
-  if(mode==="A"&&sets._pool){
-    G.className="hint";G.innerHTML=`<b>A 몰빵휠</b> · 풀 [${sets._pool.join(" ")}] — 이 7개에서 당첨 6개가 다 나오면 <b>1등 확정</b>.`;
-  }else if(mode==="B"&&sets._pool){
-    const gr=guaranteeInPool(sets,sets._pool);
-    if(gr){G.className="hint";G.innerHTML=`<b>B 커버리지</b> · 풀 ${sets._pool.length}개 안에서 당첨 6개가 다 나오는 모든 경우(${gr.count.toLocaleString()}가지)에서 <b>최소 ${gr.minMatch}개 일치</b> 보장.`;}
-    else{G.className="";}
-  }else{G.className="";}
+  // 보장 (믹스: A/B 각각)
+  const G=$("#guarantee");let html="";
+  if(meta.aPool){
+    html+=`<div class="hint" style="margin-bottom:6px"><b>A 몰빵휠</b> 풀[${meta.aPool.join(" ")}] — ${meta.a>=7?"이 7개에서 당첨 6개가 다 나오면 <b>1등 확정</b>":"부분 휠 (1등 보장은 A 7게임부터)"}.</div>`;
+  }
+  if(meta.bPool&&meta.bTickets){
+    const gr=guaranteeInPool(meta.bTickets,meta.bPool);
+    if(gr)html+=`<div class="hint"><b>B 커버리지</b> 풀 ${meta.bPool.length}개에서 6개가 다 나오면 <b>최소 ${gr.minMatch}개 일치</b> 보장 (경우 ${gr.count.toLocaleString()}).</div>`;
+  }
+  G.innerHTML=html;
 }
 
-/* ===== 실행 ===== */
+/* ===== 실행 (믹스) ===== */
 function generate(){
-  if(getList().length===0){toast("먼저 데이터를 동기화하세요");return}
-  const games=Math.max(1,Math.min(20,+$("#opt-games").value||10));
+  if(getList().length===0){toast("먼저 데이터를 불러오세요");return}
+  const c=cnt("c"),a=cnt("a"),b=cnt("b"),total=c+a+b;
+  if(total<1){toast("게임 수를 1 이상으로");return}
+  if(total>20){toast("합계 20게임 이하로");return}
+  if(b>0&&POOL.size<12){toast("B는 풀 12개 이상 필요");return}
   const unpop=$("#opt-unpop").checked;
-  let sets;
-  if(currentMode==="A")sets=genA(games,unpop);
-  else if(currentMode==="B"){
-    if(POOL.size<12){toast("B는 풀 12개 이상 필요");return}
-    sets=genB(games,unpop);
-  }else sets=genC(games,unpop);
-  render(sets,currentMode);
+  let sets=[];const meta={labels:[],nums:[],a};
+  const tag=(arr,L)=>arr.forEach((_,i)=>{meta.labels.push(L);meta.nums.push(i+1)});
+  if(c>0){const s=genC(c,unpop);tag(s,"C");sets=sets.concat(s);}
+  if(a>0){const s=genA(a,unpop);tag(s,"A");meta.aPool=s._pool;sets=sets.concat(s);}
+  if(b>0){const s=genB(b,unpop);tag(s,"B");meta.bPool=s._pool;meta.bTickets=s;sets=sets.concat(s);}
+  render(sets,meta);
   if($("#opt-antirep").checked)pushGenMem(sets.map(s=>s.join("-")));
 }
 
@@ -510,42 +516,52 @@ function copyResult(){
 }
 function saveResult(){
   let arr=[];try{arr=JSON.parse(localStorage.getItem(SAVE_KEY)||"[]")}catch(e){}
-  arr.push({t:Date.now(),mode:currentMode,sets:LAST});
+  arr.push({t:Date.now(),mix:LAST_META&&LAST_META.labels,sets:LAST});
   localStorage.setItem(SAVE_KEY,JSON.stringify(arr));toast("저장됨");
 }
 
 /* ===== 이벤트 ===== */
-document.querySelectorAll("#mode-seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+["c","a","b"].forEach(k=>$("#cnt-"+k).oninput=updateMix);
 $("#opt-window").oninput=e=>$("#win-label").textContent=e.target.value;
 $("#btn-autopool").onclick=autoPool;
 $("#btn-clearpool").onclick=()=>{POOL=new Set();buildGrid();updatePoolHint()};
 $("#btn-gen").onclick=generate;
 $("#btn-copy").onclick=copyResult;
 $("#btn-save").onclick=saveResult;
-$("#btn-sync").onclick=syncLatest;
-$("#btn-syncall").onclick=syncAll;
+$("#btn-sync").onclick=refreshData;
 $("#proxy-sel").onchange=e=>setProxy(e.target.value);
 
-/* ===== 번들 데이터 자동 로드 (같은 도메인 → 프록시/CORS 불필요) ===== */
+/* ===== 데이터 로드 (매주 자동갱신되는 data.json) =====
+   웹=같은도메인 data.json / 앱=원격 GitHub(ACAO:* 라 WebView도 fetch 가능) 우선, 오프라인이면 번들 파일 */
+const REMOTE_DATA="https://zeropull0-star.github.io/lotto/data.json";
 async function loadBundled(){
-  try{
-    const r=await fetch("data.json",{cache:"no-store"});
-    if(!r.ok)return false;
-    const d=await r.json();
-    if(d&&Object.keys(d).length){
-      DATA=Object.assign({},d,DATA);   // 번들(최신 회차 포함) + 로컬 동기화분 병합
-      Store.save(DATA);return true;
-    }
-  }catch(e){}
+  const sources = IS_ANDROID ? [REMOTE_DATA,"data.json"] : ["data.json",REMOTE_DATA];
+  for(const src of sources){
+    try{
+      const r=await fetch(src,{cache:"no-store"});
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(d&&Object.keys(d).length){
+        DATA=Object.assign({},d,DATA);   // 최신 회차 + 로컬 병합
+        Store.save(DATA);return true;
+      }
+    }catch(e){}
+  }
   return false;
+}
+async function refreshData(){
+  $("#status").textContent="데이터 새로고침…";
+  const ok=await loadBundled();
+  updateStatus();
+  toast(ok?`최신 ${latestRound()}회까지 갱신`:"새로고침 실패 (네트워크 확인)");
 }
 
 /* ===== 초기화 ===== */
 (async function init(){
   $("#proxy-sel").value=getProxy();
-  buildGrid();setMode("C");
+  buildGrid();updateMix();
   const ok=await loadBundled();
   updateStatus();
-  if(getList().length===0)toast(ok?"데이터 로드됨":"데이터 동기화가 필요합니다");
+  if(getList().length===0)toast(ok?"데이터 로드됨":"데이터 새로고침을 눌러주세요");
 })();
 </script>
