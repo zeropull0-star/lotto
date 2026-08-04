@@ -90,10 +90,10 @@ h3{font-size:14px;margin:0 0 8px}
 
   <!-- 모드 -->
   <div class="card">
-    <div class="row" style="flex-wrap:nowrap;align-items:center;gap:8px">
-      <label class="opt" style="flex:1;justify-content:center;padding:7px 4px">C <input type="number" id="cnt-c" value="10" min="0" max="20" style="width:40px"></label>
-      <label class="opt" style="flex:1;justify-content:center;padding:7px 4px">A <input type="number" id="cnt-a" value="0" min="0" max="20" style="width:40px"></label>
-      <label class="opt" style="flex:1;justify-content:center;padding:7px 4px">B <input type="number" id="cnt-b" value="0" min="0" max="20" style="width:40px"></label>
+    <div class="row" style="flex-wrap:nowrap;align-items:center;gap:6px">
+      <label class="opt" style="flex:1;justify-content:center;padding:7px 3px;font-size:13px">골고루 <input type="number" id="cnt-c" value="10" min="0" max="20" style="width:32px"></label>
+      <label class="opt" style="flex:1;justify-content:center;padding:7px 3px;font-size:13px">몰빵 <input type="number" id="cnt-a" value="0" min="0" max="20" style="width:32px"></label>
+      <label class="opt" style="flex:1;justify-content:center;padding:7px 3px;font-size:13px">커버 <input type="number" id="cnt-b" value="0" min="0" max="20" style="width:32px"></label>
       <span class="muted" style="white-space:nowrap">총 <b id="mix-total">10</b></span>
     </div>
     <div class="seg-desc" id="mix-desc" style="margin-top:8px"></div>
@@ -443,11 +443,12 @@ function updateMix(){
   const c=cnt("c"),a=cnt("a"),b=cnt("b");
   const total=c+a+b;
   $("#mix-total").textContent=total;
+  // 항상 보이는 뜻풀이 + (선택 시) 구성 요약
+  const legend="골고루=겹침없이 넓게 · 몰빵=대박(7게임 1등보장) · 커버=잔당첨";
   const parts=[];
-  if(c)parts.push(`C 골고루 ${c}장`);
-  if(a)parts.push(`A 몰빵휠 ${a}장`);
-  if(b)parts.push(`B 커버리지 ${b}장`);
-  $("#mix-desc").textContent=total?("= "+parts.join(" + ")+(total>20?"  ⚠ 합계 20 이하 권장":"")):"각 전략 게임 수를 정하세요 (섞어도 됩니다).";
+  if(c)parts.push(`골고루 ${c}`);if(a)parts.push(`몰빵 ${a}`);if(b)parts.push(`커버 ${b}`);
+  const sum=total?` &nbsp;→&nbsp; ${parts.join(" + ")} = ${total}게임`+(total>20?' <span style="color:var(--warn)">⚠ 20 이하로</span>':""):"";
+  $("#mix-desc").innerHTML=legend+sum;
   const needPool=(a+b)>0;
   $("#pool-card").style.display=needPool?"block":"none";
   if(needPool){if(POOL.size===0)autoPool();else updatePoolHint();}
@@ -468,7 +469,8 @@ function render(sets,meta){
   sets.forEach((p,i)=>{
     const line=document.createElement("div");line.className="setline";
     const tag=document.createElement("span");tag.className="settag";
-    tag.textContent=(meta.labels[i]||"")+(meta.nums[i]||"");
+    const NM={C:"골",A:"몰",B:"커"};
+    tag.textContent=(NM[meta.labels[i]]||"")+(meta.nums[i]||"");
     line.appendChild(tag);
     p.forEach(n=>line.appendChild(ballEl(n)));
     const b=document.createElement("span");b.className="badges";b.innerHTML=badgesFor(p);
