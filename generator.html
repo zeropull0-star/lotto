@@ -525,10 +525,26 @@ $("#btn-sync").onclick=syncLatest;
 $("#btn-syncall").onclick=syncAll;
 $("#proxy-sel").onchange=e=>setProxy(e.target.value);
 
+/* ===== 번들 데이터 자동 로드 (같은 도메인 → 프록시/CORS 불필요) ===== */
+async function loadBundled(){
+  try{
+    const r=await fetch("data.json",{cache:"no-store"});
+    if(!r.ok)return false;
+    const d=await r.json();
+    if(d&&Object.keys(d).length){
+      DATA=Object.assign({},d,DATA);   // 번들(최신 회차 포함) + 로컬 동기화분 병합
+      Store.save(DATA);return true;
+    }
+  }catch(e){}
+  return false;
+}
+
 /* ===== 초기화 ===== */
-(function init(){
+(async function init(){
   $("#proxy-sel").value=getProxy();
-  buildGrid();setMode("C");updateStatus();
-  if(getList().length===0){toast("데이터 동기화가 필요합니다");}
+  buildGrid();setMode("C");
+  const ok=await loadBundled();
+  updateStatus();
+  if(getList().length===0)toast(ok?"데이터 로드됨":"데이터 동기화가 필요합니다");
 })();
 </script>
