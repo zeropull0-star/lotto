@@ -77,15 +77,16 @@ h3{font-size:14px;margin:0 0 8px}
       </div>
     </div>
     <div class="progress" id="prog-wrap" style="display:none"><i id="prog"></i></div>
-    <div class="row" style="margin-top:8px">
-      <span class="muted">CORS 프록시(웹):</span>
+    <details style="margin-top:8px">
+      <summary class="muted" style="cursor:pointer">CORS 프록시 · <b>앱 전용 (고급)</b></summary>
+      <div class="muted" style="margin:6px 0">웹에서는 <b>건드릴 필요 없습니다</b> — 데이터는 자동으로 불러옵니다. 이 설정은 안드로이드 앱/로컬서버에서만 씁니다.</div>
       <select id="proxy-sel">
         <option value="https://corsproxy.io/?">corsproxy.io</option>
         <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
         <option value="https://api.codetabs.com/v1/proxy?quest=">codetabs.com</option>
         <option value="">없음 (앱/로컬서버)</option>
       </select>
-    </div>
+    </details>
   </div>
 
   <!-- 모드 -->
