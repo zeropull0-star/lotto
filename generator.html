@@ -1,82 +1,194 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#E5390F">
 <title>로또 추첨기</title>
+<script>
+/* 테마: 플래시 방지 + 토글 (메인 스크립트와 독립) */
+(function(){try{var t=localStorage.getItem("lotto_theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+function toggleTheme(){var r=document.documentElement,cur=r.getAttribute("data-theme");
+  if(!cur)cur=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
+  var nx=cur==="dark"?"light":"dark";r.setAttribute("data-theme",nx);
+  try{localStorage.setItem("lotto_theme",nx);}catch(e){}
+  var b=document.getElementById("theme-btn");if(b)b.textContent=nx==="dark"?"주간":"야간";}
+document.addEventListener("DOMContentLoaded",function(){
+  var r=document.documentElement,cur=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+  var b=document.getElementById("theme-btn");if(b)b.textContent=cur==="dark"?"주간":"야간";});
+</script>
 <style>
 :root{
-  --bg:#12141a; --card:#1b1e26; --card2:#232733; --line:#2c313d;
-  --txt:#e7e9ee; --muted:#8b909d; --accent:#5b8cff; --accent2:#33c98a;
-  --warn:#ffb454; --danger:#ff6b6b;
+  --paper:#EDE9DF; --panel:#F6F3EB; --ink:#22201C; --muted:#8A8176;
+  --line:#D8D1C4; --line2:#E4DED2;
+  --accent:#E5390F; --accent-ink:#B32C09; --accent-soft:#F6E0D8;
+  --good:#4B7A2E; --good-soft:#E7EFDD; --good-line:#C4D6AC; --warn:#B26A00;
+  --b1:#F5B301; --b1t:#3A2C00; --b2:#2E90D4; --b3:#E24B45; --b4:#7B828B; --b5:#6FA82E;
+  --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono","SFMono-Regular",Menlo,"Roboto Mono","D2Coding",monospace;
+  --shadow:0 1px 2px rgba(40,30,20,.05),0 6px 18px rgba(40,30,20,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#141210; --panel:#1D1915; --ink:#F0EAE0; --muted:#968B7C;
+  --line:#302A23; --line2:#26211B;
+  --accent:#FF5A2C; --accent-ink:#FF7B50; --accent-soft:#3A1E13;
+  --good:#8FC061; --good-soft:#1C2415; --good-line:#374A26; --warn:#E7A64B;
+  --b2:#3B9BDD; --b4:#8A919A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  --paper:#141210; --panel:#1D1915; --ink:#F0EAE0; --muted:#968B7C;
+  --line:#302A23; --line2:#26211B;
+  --accent:#FF5A2C; --accent-ink:#FF7B50; --accent-soft:#3A1E13;
+  --good:#8FC061; --good-soft:#1C2415; --good-line:#374A26; --warn:#E7A64B;
+  --b2:#3B9BDD; --b4:#8A919A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --paper:#EDE9DF; --panel:#F6F3EB; --ink:#22201C; --muted:#8A8176;
+  --line:#D8D1C4; --line2:#E4DED2;
+  --accent:#E5390F; --accent-ink:#B32C09; --accent-soft:#F6E0D8;
+  --good:#4B7A2E; --good-soft:#E7EFDD; --good-line:#C4D6AC; --warn:#B26A00;
+  --b2:#2E90D4; --b4:#7B828B;
+  --shadow:0 1px 2px rgba(40,30,20,.05),0 6px 18px rgba(40,30,20,.06);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--txt);
-  font-family:-apple-system,"Noto Sans KR",Roboto,"Malgun Gothic",sans-serif;
-  font-size:15px;line-height:1.5;padding-bottom:60px}
-a{color:var(--accent);text-decoration:none}
-.wrap{max-width:640px;margin:0 auto;padding:12px}
-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-header h1{font-size:18px;margin:0}
-.nav{font-size:13px;color:var(--muted)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+html{color-scheme:light dark}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);
+  font-size:15px;line-height:1.5;padding:0 0 72px;
+  background-image:radial-gradient(var(--line2) .5px,transparent .6px);background-size:15px 15px}
+a{color:#fff;text-decoration:none;font-weight:600}
+.wrap{max-width:560px;margin:0 auto;padding:16px 14px}
 .muted{color:var(--muted);font-size:12.5px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-label.opt{display:flex;align-items:center;gap:6px;font-size:13.5px;background:var(--card2);
+
+/* 마스트헤드 = 추첨 슬립 */
+.masthead{position:relative;overflow:hidden;background:var(--accent);color:#fff;
+  border-radius:16px;padding:20px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.masthead::after{content:"";position:absolute;right:-26px;top:-26px;width:150px;height:150px;pointer-events:none;
+  background:radial-gradient(circle at 30% 32%,rgba(255,255,255,.20) 21px,transparent 22px),
+    radial-gradient(circle at 72% 54%,rgba(255,255,255,.14) 15px,transparent 16px),
+    radial-gradient(circle at 44% 78%,rgba(255,255,255,.10) 11px,transparent 12px)}
+.masthead .eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;font-weight:700;opacity:.9}
+.masthead h1{margin:3px 0 0;font-size:27px;font-weight:800;letter-spacing:-.015em;line-height:1.04;text-wrap:balance}
+.masthead .sub{font-family:var(--mono);font-size:11px;letter-spacing:.14em;opacity:.82;margin-top:5px}
+.mh-actions{position:absolute;top:14px;right:14px;display:flex;gap:7px;z-index:1}
+.icbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.30);color:#fff;
+  border-radius:9px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.icbtn:active{transform:scale(.96)}
+
+/* 카드 = 인쇄 슬립 패널 */
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card::before{content:"";position:absolute;left:14px;right:14px;top:0;height:2px;
+  background:var(--accent);border-radius:0 0 2px 2px;opacity:.85}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent-ink);font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:9px}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+
+label.opt{display:flex;align-items:center;gap:6px;font-size:13.5px;background:var(--paper);color:var(--ink);
   border:1px solid var(--line);border-radius:10px;padding:7px 10px;cursor:pointer}
 input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
-button{font-family:inherit;font-size:14px;border:none;border-radius:10px;padding:9px 14px;
-  background:var(--card2);color:var(--txt);cursor:pointer;border:1px solid var(--line)}
-button:active{transform:scale(.98)}
-button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+input[type=range]{accent-color:var(--accent)}
+button{font-family:var(--font);font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 14px;
+  background:var(--paper);color:var(--ink);cursor:pointer;font-weight:600;transition:transform .05s,filter .15s}
+button:active{transform:scale(.97)}
 button.ghost{background:transparent}
-select,input[type=number]{font-family:inherit;font-size:14px;background:var(--card2);color:var(--txt);
-  border:1px solid var(--line);border-radius:10px;padding:8px}
-.seg{display:flex;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
-.seg button{flex:1;background:transparent;border:none;padding:10px 6px;border-radius:9px;color:var(--muted);font-weight:600}
-.seg button.on{background:var(--accent);color:#fff}
-.seg-desc{font-size:12.5px;color:var(--muted);margin-top:8px;min-height:34px}
-.ball{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;
-  font-weight:700;font-size:14px;color:#2b2b2b;margin:2px;box-shadow:inset 0 -3px 6px rgba(0,0,0,.18)}
-.ball.sm{width:28px;height:28px;font-size:12.5px}
-.bcol-1{background:#fbc400}.bcol-2{background:#69c8f2}.bcol-3{background:#ff7272}
-.bcol-4{background:#cfd0d3}.bcol-5{background:#b0d840}
-.setline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
+.small{font-size:12px;padding:6px 11px}
+select,input[type=number]{font-family:var(--mono);font-size:14px;background:var(--paper);color:var(--ink);
+  border:1px solid var(--line);border-radius:9px;padding:8px;font-variant-numeric:tabular-nums}
+input[type=number]{text-align:center}
+#btn-gen{width:100%;padding:15px;font-size:16px;font-weight:800;letter-spacing:.02em;
+  background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:13px;
+  box-shadow:0 7px 18px -6px var(--accent);margin:2px 0 14px}
+#btn-gen:hover{filter:brightness(1.06)}
+#status{font-variant-numeric:tabular-nums}
+
+.seg-desc{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:18px;line-height:1.55}
+.seg-desc b{color:var(--ink)}
+
+/* 볼 */
+.ball{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+  border-radius:50%;font-family:var(--mono);font-weight:700;font-size:14px;color:#fff;background:var(--b4);
+  font-variant-numeric:tabular-nums;
+  box-shadow:inset 0 -3px 5px rgba(0,0,0,.24),inset 0 3px 4px rgba(255,255,255,.35),0 1px 2px rgba(0,0,0,.15)}
+.ball::after{content:"";position:absolute;top:15%;left:21%;width:34%;height:26%;border-radius:50%;
+  background:rgba(255,255,255,.55);filter:blur(1px)}
+.ball.sm{width:29px;height:29px;font-size:12px}
+.bcol-1{background:var(--b1);color:var(--b1t)}
+.bcol-2{background:var(--b2)}.bcol-3{background:var(--b3)}
+.bcol-4{background:var(--b4)}.bcol-5{background:var(--b5)}
+
+/* 결과 = 절취선 인쇄행 */
+.setline{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:10px 0;border-bottom:1px dashed var(--line)}
 .setline:last-child{border-bottom:none}
-.settag{font-size:11px;color:var(--muted);min-width:26px}
+.settag{font-size:11px;font-weight:700;color:#fff;background:var(--accent);min-width:30px;height:22px;
+  display:inline-flex;align-items:center;justify-content:center;border-radius:6px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums}
 .badges{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap}
-.badge{font-size:10.5px;color:var(--muted);background:var(--card2);border:1px solid var(--line);
-  border-radius:6px;padding:2px 6px;white-space:nowrap}
-.grid45{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;margin-top:10px}
-.gcell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
-  background:var(--card2);border:1px solid var(--line);font-size:13px;cursor:pointer;user-select:none}
-.gcell.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
-.hint{background:#1e2a1e;border:1px solid #2f5030;color:#bfe6bf;font-size:12.5px;border-radius:10px;padding:9px 11px;margin-top:10px}
-.hint.warn{background:#2a2418;border-color:#5b4a24;color:#ffdba0}
-.progress{height:6px;background:var(--card2);border-radius:99px;overflow:hidden;margin-top:8px}
+.badge{font-size:10.5px;color:var(--muted);background:var(--paper);border:1px solid var(--line);
+  border-radius:6px;padding:2px 6px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#coverage{font-variant-numeric:tabular-nums}
+
+/* 번호 풀 = OMR 버블 필드 */
+.grid45{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-top:12px}
+.gcell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:var(--paper);border:1.5px solid var(--line);font-family:var(--mono);font-size:12.5px;
+  color:var(--muted);cursor:pointer;user-select:none;transition:.12s;font-variant-numeric:tabular-nums}
+.gcell.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;
+  box-shadow:0 0 0 3px var(--accent-soft)}
+
+.hint{background:var(--good-soft);border:1px solid var(--good-line);color:var(--good);
+  font-size:12.5px;border-radius:10px;padding:9px 11px;margin-top:10px;line-height:1.55}
+.hint.warn{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
 .progress > i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+details summary{list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"▸ ";color:var(--accent-ink)}
+details[open] summary::before{content:"▾ "}
+
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
-  background:#000d;color:#fff;padding:10px 16px;border-radius:99px;font-size:13px;pointer-events:none;
-  transition:.25s;z-index:99}
+  background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:99px;font-size:13px;font-weight:600;
+  pointer-events:none;transition:.25s;z-index:99;box-shadow:var(--shadow)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.small{font-size:12px;padding:6px 10px}
-h3{font-size:14px;margin:0 0 8px}
-.disclaimer{font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px;line-height:1.6}
+.disclaimer{font-size:11.5px;color:var(--muted);text-align:center;margin:16px 6px 0;line-height:1.7}
+.disclaimer b{color:var(--accent-ink)}
+
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px}
+
+/* 추첨 캐스케이드 */
+@keyframes rowin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:scale(.5)}70%{transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+#result .setline{animation:rowin .3s ease both}
+#result .setline .ball{animation:pop .34s cubic-bezier(.2,.8,.2,1) both}
+#result .setline .ball:nth-child(2){animation-delay:.02s}
+#result .setline .ball:nth-child(3){animation-delay:.06s}
+#result .setline .ball:nth-child(4){animation-delay:.10s}
+#result .setline .ball:nth-child(5){animation-delay:.14s}
+#result .setline .ball:nth-child(6){animation-delay:.18s}
+#result .setline .ball:nth-child(7){animation-delay:.22s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
 <div class="wrap">
-  <header>
-    <h1>🎱 로또 추첨기</h1>
-    <div class="nav"><a href="lotto.html">분석기 →</a></div>
-  </header>
+  <div class="masthead">
+    <div class="mh-actions">
+      <button class="icbtn" id="theme-btn" onclick="toggleTheme()" aria-label="테마 전환">야간</button>
+      <a class="icbtn" href="lotto.html">분석기</a>
+    </div>
+    <div class="eyebrow">동행복권 스타일 · 재미용 도구</div>
+    <h1>로또 추첨기</h1>
+    <div class="sub">LOTTO&nbsp;6&nbsp;·&nbsp;45&nbsp;&nbsp;GENERATOR</div>
+  </div>
 
   <!-- 데이터 -->
   <div class="card">
+    <div class="eyebrow">데이터</div>
     <div class="row" style="justify-content:space-between">
       <div id="status" class="muted">데이터 확인중…</div>
-      <div class="row">
-        <button class="small" id="btn-sync">데이터 새로고침</button>
-      </div>
+      <button class="small" id="btn-sync">새로고침</button>
     </div>
     <div class="progress" id="prog-wrap" style="display:none"><i id="prog"></i></div>
-    <details style="margin-top:8px">
+    <details style="margin-top:10px">
       <summary class="muted" style="cursor:pointer">CORS 프록시 · <b>앱 전용 (고급)</b></summary>
       <div class="muted" style="margin:6px 0">웹에서는 <b>건드릴 필요 없습니다</b> — 데이터는 자동으로 불러옵니다. 이 설정은 안드로이드 앱/로컬서버에서만 씁니다.</div>
       <select id="proxy-sel">
@@ -88,20 +200,21 @@ h3{font-size:14px;margin:0 0 8px}
     </details>
   </div>
 
-  <!-- 모드 -->
+  <!-- 전략 믹스 -->
   <div class="card">
+    <div class="eyebrow">전략 믹스</div>
     <div class="row" style="flex-wrap:nowrap;align-items:center;gap:6px">
       <label class="opt" style="flex:1;justify-content:center;padding:7px 3px;font-size:13px">골고루 <input type="number" id="cnt-c" value="10" min="0" max="20" style="width:32px"></label>
       <label class="opt" style="flex:1;justify-content:center;padding:7px 3px;font-size:13px">몰빵 <input type="number" id="cnt-a" value="0" min="0" max="20" style="width:32px"></label>
       <label class="opt" style="flex:1;justify-content:center;padding:7px 3px;font-size:13px">커버 <input type="number" id="cnt-b" value="0" min="0" max="20" style="width:32px"></label>
       <span class="muted" style="white-space:nowrap">총 <b id="mix-total">10</b></span>
     </div>
-    <div class="seg-desc" id="mix-desc" style="margin-top:8px"></div>
+    <div class="seg-desc" id="mix-desc"></div>
   </div>
 
-  <!-- 공통 옵션 -->
+  <!-- 옵션 -->
   <div class="card">
-    <h3>옵션</h3>
+    <div class="eyebrow">옵션</div>
     <div class="row">
       <label class="opt"><input type="checkbox" id="opt-unpop" checked> 비인기 필터</label>
       <label class="opt"><input type="checkbox" id="opt-antirep" checked> 반복 방지</label>
@@ -111,33 +224,32 @@ h3{font-size:14px;margin:0 0 8px}
         <input type="range" id="opt-window" min="20" max="400" step="10" value="120" style="flex:1">
       </label>
     </div>
-    <div class="muted" style="margin-top:6px">최근 회차만 가중치에 반영 → 매주 흐름이 바뀝니다. (C는 거의 균등, A·B 풀 추천에 사용)</div>
+    <div class="muted" style="margin-top:8px">최근 회차만 가중치에 반영 → 매주 흐름이 바뀝니다. (골고루는 거의 균등, 몰빵·커버 풀 추천에 사용)</div>
   </div>
 
-  <!-- 풀 (A/B 전용) -->
+  <!-- 번호 풀 (몰빵/커버 전용) -->
   <div class="card" id="pool-card" style="display:none">
+    <div class="eyebrow">번호 풀</div>
     <div class="row" style="justify-content:space-between">
-      <h3 style="margin:0">풀 선택 <span class="muted" id="pool-count"></span></h3>
+      <span class="muted" id="pool-count"></span>
       <div class="row">
         <button class="small" id="btn-autopool">자동 추천</button>
         <button class="small ghost" id="btn-clearpool">비우기</button>
       </div>
     </div>
-    <div class="muted" id="pool-need"></div>
+    <div class="muted" id="pool-need" style="margin-top:6px"></div>
     <div class="grid45" id="pool-grid"></div>
     <div id="pool-hint"></div>
   </div>
 
-  <button class="primary" id="btn-gen" style="width:100%;padding:14px;font-size:16px">번호 생성</button>
+  <button id="btn-gen">번호 뽑기</button>
 
   <!-- 결과 -->
-  <div class="card" id="result-card" style="display:none;margin-top:12px">
-    <div class="row" style="justify-content:space-between;margin-bottom:4px">
-      <h3 style="margin:0">추천 조합</h3>
-      <div class="row">
-        <button class="small" id="btn-copy">복사</button>
-        <button class="small" id="btn-save">저장</button>
-      </div>
+  <div class="card" id="result-card" style="display:none">
+    <div class="eyebrow">추천 결과</div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:-6px;margin-bottom:2px">
+      <button class="small" id="btn-copy">복사</button>
+      <button class="small ghost" id="btn-save">저장</button>
     </div>
     <div id="guarantee"></div>
     <div id="result"></div>
